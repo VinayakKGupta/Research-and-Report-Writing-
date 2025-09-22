@@ -1,0 +1,253 @@
+---
+title: "observations final exam"
+author: "Vinayak Kumar Gupta"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+
+ complaints <-  read.table("C:/Users/Vinayak/Desktop/Subjects/Analysis of Observations/FINAL EXAM/complain dataset.txt")
+summary(complaints)
+
+```
+
+```{r}
+
+#  Variables such as gender , residency , visits , complaints were converted as factors and numerics 
+complaints$gender <-  factor(complaints$gender)
+complaints$residency <-  factor(complaints$residency)
+complaints$visits <-  as.numeric(complaints$visits)
+complaints$complaints <-  as.numeric(complaints$complaints)
+
+summary(complaints)
+
+```
+
+```{r}
+
+boxplot(complaints )
+
+```
+
+```{r}
+
+# Checking for zero - inflation  model between the variables
+
+hist(complaints$complaints , main = "complaints received" , xlab = "no. of complaints" )
+box()
+histogram(~complaints | gender , complaints, main = "gender complaints" , col = "red" )
+histogram(~complaints | residency , complaints, main = "residency training complaints" , col = "lightgreen" )
+
+
+```
+
+```{r}
+
+library(lattice)
+xyplot(
+  complaints ~ visits | gender ,
+  data = complaints,
+  groups = residency,
+  auto.key = list(columns = 2),
+  panel = function(x, y, ...) {
+    panel.grid(h = TRUE, v = TRUE, col = "lightgray")  # Add gridlines
+    panel.xyplot(x, y, ...)  # Plot the data points
+  }
+)
+```
+
+```{r}
+# Assuming you have a data frame named 'your_data' with columns 'complaints', 'hour', and 'revenue'
+
+# Load the necessary library
+library("scatterplot3d")
+
+scatterplot3d(complaints$hours, complaints$revenue, complaints$complaints,
+              color = "blue", pch = 19, type = "h", main = "Complaints, Hours, and Revenue",
+              xlab = "Hours", ylab = "Revenue", zlab = "Complaints")
+
+
+
+# You can customize the color, point style, and labels to fit your preferences
+
+```
+
+```{r}
+
+library(MASS)
+
+complaints.pois <- glm(complaints ~ .^2, data = complaints, family = poisson)
+summary(complaints.pois)
+
+ #stepAIC(complaints.pois)
+
+```
+
+```{r}
+
+par(mfrow = c(1, 2))
+plot(residuals(complaints.pois, type = "pearson"), ylab = "Pearson residuals")
+plot(residuals(complaints.pois, type = "pearson") ~ complaints.pois$fitted, xlab = "Fitted values",
+ylab = "Pearson residuals")
+mtext("Poisson model", side = 3, line = 0, outer = TRUE)
+par(mfrow = c(1, 1))
+
+```
+
+```{r}
+
+library(lattice)
+library(AER)
+
+finalmodel.pois <- glm(formula = complaints ~ visits + residency + gender + revenue  
+      + residency:gender + residency:revenue + 
+    residency:hours + gender:revenue, family = poisson, data = complaints)
+
+summary(finalmodel.pois)
+
+dispersiontest(finalmodel.pois)
+
+```
+
+
+```{r}
+
+par(mfrow = c(1, 2))
+plot(residuals(finalmodel.pois, type = "pearson"), ylab = "Pearson residuals")
+plot(residuals(finalmodel.pois, type = "pearson") ~ finalmodel.qpois$fitted, xlab = "Fitted values",
+ylab = "Pearson residuals")
+mtext("Poisson model", side = 3, line = 0, outer = TRUE)
+par(mfrow = c(1, 1))
+
+```
+
+```{r}
+
+library(countreg)
+rootogram(finalmodel.pois , main = " poisson model ")
+box()
+```
+
+```{r}
+
+finalmodel.qpois <- glm(formula = complaints ~ visits + residency + gender + revenue  
+     + residency:gender + residency:revenue + 
+    residency:hours + gender:revenue, family = quasipoisson, data = complaints)
+summary(finalmodel.qpois) 
+  
+```
+
+```{r}
+
+par(mfrow = c(1, 2))
+plot(residuals(finalmodel.qpois, type = "pearson"), ylab = "Pearson residuals")
+plot(residuals(finalmodel.qpois, type = "pearson") ~ finalmodel.qpois$fitted, xlab = "Fitted values",
+ylab = "Pearson residuals")
+mtext("Zero-inflated Poisson model", side = 3, line = 0, outer = TRUE)
+par(mfrow = c(1, 1))
+
+```
+
+```{r}
+
+finalmodel.nb <- glm.nb(formula = complaints ~ visits + residency + gender + revenue  
+     + residency:gender + residency:revenue + 
+    residency:hours + gender:revenue, data = complaints)
+summary(finalmodel.nb)
+
+```
+
+```{r}
+
+par(mfrow = c(1, 2))
+plot(residuals(finalmodel.nb, type = "pearson"), ylab = "Pearson residuals")
+plot(residuals(finalmodel.nb, type = "pearson") ~ finalmodel.nb$fitted, xlab = "Fitted values",
+ylab = "Pearson residuals")
+mtext("Negative binomial model", side = 3, line = -2, outer = TRUE)
+par(mfrow = c(1, 1))
+
+```
+
+```{r}
+
+library(countreg)
+rootogram(finalmodel.nb , main = " negative binomial model ")
+box()
+
+```
+
+```{r}
+
+library(glmnet)
+finalmodel.zerinf <- zeroinfl(formula = complaints ~ visits + residency + gender + revenue  + residency:gender + residency:revenue + 
+    residency:hours + gender:revenue 
+     , data = complaints , dist = "poisson" )
+
+summary(finalmodel.zerinf)
+
+```
+
+
+```{r}
+
+library(countreg)
+rootogram(finalmodel.zerinf , main = " zero inflation poission model ")
+box()
+
+```
+
+```{r}
+
+par(mfrow = c(1, 2))
+plot(residuals(finalmodel.zerinf, type = "pearson"), ylab = "Pearson residuals")
+plot(residuals(finalmodel.zerinf, type = "pearson") ~ finalmodel.zerinf$fitted, xlab = "Fitted values",
+ylab = "Pearson residuals")
+mtext(" Zero Inflated Poisson Model", side = 3, line = -2, outer = TRUE)
+par(mfrow = c(1, 1))
+
+```
+
+```{r}
+
+finalmodel.zerinfnegbin <- zeroinfl(formula = complaints ~ visits + residency + gender + revenue   + residency:gender + residency:revenue + 
+    residency:hours + gender:revenue 
+    , data = complaints , dist = "negbin")
+summary(finalmodel.zerinfnegbin)
+
+```
+
+```{r}
+
+library(countreg)
+rootogram(finalmodel.zerinfnegbin , main = " zero inflation negative binomial model ")
+box()
+
+```
+
+```{r}
+
+AIC(finalmodel.nb,finalmodel.pois,finalmodel.qpois,finalmodel.zerinf,finalmodel.zerinfnegbin)
+
+```
+
+```{r}
+# Assuming you have a data frame named 'your_data' with columns 'complaints', 'hour', and 'revenue'
+
+# Load the necessary library
+library("plotly")
+
+# Create a 3D scatter plot
+scatterplot <- plot_ly(data = complaints, x = ~complaints, y = ~hours, z = ~revenue, 
+                       type = "scatter3d", mode = "markers", marker = list(size = 4))
+
+# Add axis labels and a title
+scatterplot <- layout(scatterplot, scene = list(xaxis = list(title = "Complaints"),
+                                                yaxis = list(title = "Hour"),
+                                                zaxis = list(title = "Revenue")),
+                      title = "Complaints, Hour, and Revenue")
+
+# Display the plot
+scatterplot
+
+```
