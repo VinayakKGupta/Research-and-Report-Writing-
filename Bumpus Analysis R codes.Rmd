@@ -1,0 +1,202 @@
+---
+title: "Assignment2"
+author: "Vinayak Kumar Gupta"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+Insert the data 
+```{r}
+bumpus <-  read.table("C:/Users/Vinayak/Desktop/Subjects/Analysis of Observations/Bumpus.txt", header = T)
+```
+summary,structure and heads are fine.
+
+To get a rough idea of each variable with survival we will tabulate each variables.
+
+# Survival vs length
+
+```{r}
+tapply(bumpus$TotalLength, bumpus$Survival, mean)
+boxplot(TotalLength~Survival, ylab="TotalLength",xlab="'Survival", data = bumpus)
+
+```
+shorter birds tend to survive more...
+
+# Survival vs Weight
+
+```{r}
+ boxplot( Weight ~ Survival, xlab="'Survival", data = bumpus)
+ tapply(bumpus$Weight, bumpus$Survival, median)
+```
+birds with lesser weight tend to survive more
+
+# Survival vs Humerus
+
+```{r}
+tapply(bumpus$Humerus, bumpus$Survival , mean)
+boxplot( Humerus ~ Survival, xlab="'Survival", data = bumpus)
+```
+longer the humerus more chances are of the survival
+
+# Survival vs Femur
+
+```{r}
+tapply(bumpus$Femur, bumpus$Survival , mean)
+boxplot( Femur ~ Survival, xlab= "Survival", data = bumpus)
+```
+not much effect but longer ones survive more..
+
+```{r}
+ggplot(bumpus, aes(x = Sex, y = Survival, fill = Sex)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Survival by Sex",
+       x = "Sex",
+       y = "Survival Rate") +
+  theme_minimal()
+```
+hence, males tend to survive more than females.
+
+
+rest have very small effect on survival
+
+you can  confirm this by corelations
+
+check it yourself
+
+```{r}
+xyplot(
+  TotalLength ~ Weight | Survival,
+  data = bumpus,
+  groups = Sex,
+  auto.key = list(columns = 2),
+  panel = function(x, y, ...) {
+    panel.grid(h = TRUE, v = TRUE, col = "lightgray")  # Add gridlines
+    panel.xyplot(x, y, ...)  # Plot the data points
+  }
+)
+```
+Write down the observations. Length , Weight, Sex 
+
+Let's make a model 
+
+Here we will use glm (general linear model because we have categorical variables as response variables.)
+
+1st iteration
+
+```{r}
+# Change the reference levels for Survival 
+bumpus$Survival <- factor(bumpus$Survival)
+bumpus$Survival <- relevel(bumpus$Survival, ref = "TRUE")
+
+bumpus$Sex <- factor(bumpus$Sex)
+bumpus$Sex <- relevel(bumpus$Sex, ref = "f")
+
+bumpus1 <- glm(formula = Survival ~ Sex + Survival + TotalLength + AlarExtent + 
+    Weight + BeakHead + Humerus + Femur + Tibiotarsus, family = binomial(link = logit), 
+    data = bumpus) 
+summary(bumpus1)
+```
+
+2nd iteration after AIC
+
+```{r}
+
+bumpus1AIC <- glm(formula = Survival ~ Sex + TotalLength + Weight + BeakHead + 
+    Humerus, family = binomial(link = logit), data = bumpus)
+summary(bumpus1AIC)
+
+```
+
+I will try using interaction effects. 
+
+Interaction between length weight,  
+
+```{r}
+bumpus2AIC <- glm(formula = Survival ~ Sex + TotalLength + Weight  + 
+    Humerus , family = binomial(link = logit), data = bumpus)
+summary(bumpus2AIC)
+```
+
+We will use this model instead of interaction model because, there is not much effect of humerus, femur , tibiotarus, skull width , sternum on survival as seen from t apply table and boxplots and through correlation tables also. So to keep things simpler, I won't use interaction between them either. 
+
+Also, in the new model significant variables are almost lesser hence, 
+
+```{r}
+anova(bumpus1AIC, bumpus2AIC, test = "Chisq")
+```
+
+```{r}
+
+finalmodel <-  bumpus2AIC
+summary(finalmodel)
+
+```
+
+```{r}
+(cbind(OR = coef(bumpus1AIC), confint(bumpus1AIC)))
+```
+
+
+```{r}
+
+bumpus1 <- glm(formula = Survival ~ Sex + Survival + TotalLength + AlarExtent + 
+    Weight + BeakHead + Humerus + Femur + Tibiotarsus, family = binomial(link = logit), 
+    data = bumpus) 
+summary(bumpus1)
+
+bumpus1AICcheck <- glm(formula = Survival ~ Sex + Survival + TotalLength + BeakHead +  
+    Weight  + Humerus , family = binomial(link = logit), 
+    data = bumpus)
+
+anova(bumpus1, bumpus1AICcheck, test = "Chisq")
+
+```
+
+```{r}
+
+summary(bumpus1AICcheck)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+bumpus1AIC <- lm(formula = Survival ~ Sex + TotalLength + Weight + BeakHead + 
+    Humerus, data = bumpus)
+summary(bumpus1AIC)
+```
+
+
+
+
+
+
+
+```{r}
+bumpusAIC <- lm(formula = Survival ~ Sex + TotalLength + AlarExtent + Weight + 
+    BeakHead + Humerus + Femur + Tibiotarsus + SkullWidth + Sternum + 
+    ID:Sex + ID:TotalLength + ID:AlarExtent + ID:BeakHead + ID:Humerus + 
+    ID:Femur + ID:Sternum + Sex:TotalLength + Sex:BeakHead + 
+    Sex:Humerus + Sex:Tibiotarsus + Sex:SkullWidth + Sex:Sternum + 
+    TotalLength:AlarExtent + TotalLength:Weight + TotalLength:Femur + 
+    TotalLength:SkullWidth + AlarExtent:Femur + AlarExtent:Tibiotarsus + 
+    AlarExtent:SkullWidth + Weight:Humerus + Weight:Sternum + 
+    Humerus:Femur + Humerus:Tibiotarsus + Femur:Tibiotarsus + 
+    Femur:SkullWidth + SkullWidth:Sternum, data = bumpus)
+summary(bumpusAIC)
+```
